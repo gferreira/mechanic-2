@@ -15,10 +15,15 @@ from mechanic2.extensionItem import ExtensionRepository, ExtensionStoreItem, Ext
 from mechanic2.mechanicTools import getDataFromURL
 
 
+from lib.tools.debugTools import ClassNameIncrementer
+
+class MyObject(NSObject, metaclass=ClassNameIncrementer):
+   pass
+
 logger = logging.getLogger("Mechanic")
 
 
-class MCExtensionListItem(NSObject):
+class MCExtensionListItem(NSObject, metaclass=ClassNameIncrementer):
 
     def __new__(cls, *args, **kwargs):
         return cls.alloc().init()
@@ -53,11 +58,12 @@ def getExtensionData(url):
 
 class MechanicController(BaseWindowController):
 
-    def __init__(self, checkForUpdates=False, shouldLoad=True):
+    def __init__(self, checkForUpdates=False, shouldLoad=False):
 
-        self.w = vanilla.Window((600, 300), "Mechanic 2.0", minSize=(550, 200))
+        self.w = vanilla.Window((800, 600), "Mechanic 2.1", minSize=(600, 400))
 
-        # building toolbar
+        # toolbar
+
         self._toolbarSearch = vanilla.SearchBox((0, 0, 300, 0), callback=self.toolbarSearch)
         self._toolbarSearch.getNSSearchField().setFrame_(((0, 0), (300, 22)))
 
@@ -78,7 +84,7 @@ class MechanicController(BaseWindowController):
 
         self.w.addToolbar(toolbarIdentifier="MechanicToolbar", toolbarItems=toolbarItems, addStandardItems=False, displayMode="icon")
 
-        # building extension list
+        # extension list
 
         columnDescriptions = [
             dict(title="", key="extensionController", width=25, cell=MCExtensionCirleCell.alloc().init(), editable=False),
@@ -88,27 +94,97 @@ class MechanicController(BaseWindowController):
                 editable=False),
         ]
 
-        self.w.extensionList = vanilla.List((0, 0, -0, -38),
+        extensionsGroup = vanilla.Group((0, 0, -0, -0))
+        extensionsGroup.extensionList = vanilla.List((0, 0, 0, -40),
             [],
             columnDescriptions=columnDescriptions,
             showColumnTitles=False,
             selectionCallback=self.extensionListSelectionCallback,
             doubleClickCallback=self.extensionListDoubleClickCallback,
             allowsMultipleSelection=True,
-            rowHeight=39
+            rowHeight=39,
+            drawFocusRing=False,
         )
+        extensionsGroup.extensionList.setSelection([])
 
-        self.w.checkForUpdates = vanilla.Button((10, -30, 160, 22), "Check For Updates", callback=self.checkForUpdatesCallback, sizeStyle="small")
+        # bottom bar
 
-        self.w.purchaseButton = vanilla.Button((10, -30, 100, 22), "Purchase", callback=self.purchaseCallback)
-        self.w.installButton = vanilla.Button((10, -30, 100, 22), "Install", callback=self.installCallback)
-        self.w.uninstallButton = vanilla.Button((10, -30, 120, 22), "Uninstall", callback=self.uninstallCallback)
-        self.w.updateButton = vanilla.Button((10, -30, 110, 22), "Update", callback=self.updateCallback)
-        allButtons = [self.w.purchaseButton, self.w.installButton, self.w.uninstallButton, self.w.updateButton]
+        extensionsGroup.checkForUpdates = vanilla.Button((10, -30, 160, 22), "Check For Updates", callback=self.checkForUpdatesCallback, sizeStyle="small")
+
+        extensionsGroup.purchaseButton  = vanilla.Button((10, -30, 100, 22), "Purchase", callback=self.purchaseCallback)
+        extensionsGroup.installButton   = vanilla.Button((10, -30, 100, 22), "Install", callback=self.installCallback)
+        extensionsGroup.uninstallButton = vanilla.Button((10, -30, 120, 22), "Uninstall", callback=self.uninstallCallback)
+        extensionsGroup.updateButton    = vanilla.Button((10, -30, 110, 22), "Update", callback=self.updateCallback)
+
+        allButtons = [extensionsGroup.purchaseButton, extensionsGroup.installButton, extensionsGroup.uninstallButton, extensionsGroup.updateButton]
         for button in allButtons:
             button.show(False)
 
-        self.w.extensionList.setSelection([])
+        # streams
+
+        streamsGroup = vanilla.Group((0, 0, -0, -0))
+        streamsGroup.streamsLabel = vanilla.TextBox((0, 0, -0, -0), 'my streams', sizeStyle='small')
+        streamsGroup.streamsList  = vanilla.List((0, 20, -0, -40), ["my precious", "testing", "pretty", "buggy"], allowsEmptySelection=True, drawFocusRing=False)
+        # streamsGroup.streamsList.getNSTableView().setUsesAlternatingRowBackgroundColors_(False)
+        streamsGroup.streamsList.getNSTableView().setSelectionHighlightStyle_(NSTableViewSelectionHighlightStyleSourceList)
+        streamsGroup.addStream = vanilla.SquareButton((10, -30, 28, 20), "+")
+        streamsGroup.removeStream = vanilla.SquareButton((37, -30, 28, 20), "-")
+
+        # filters
+
+        developersGroup = vanilla.Group((0, 0, -0, -0))
+        developersGroup.developersLabel = vanilla.TextBox((0, 0, -0, -0), 'developers', sizeStyle='small')
+        developersGroup.developersList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False)
+        developersGroup.developersList.getNSTableView().setUsesAlternatingRowBackgroundColors_(False)
+        # developersGroup.developersList.getNSTableView().setSelectionHighlightStyle_(NSTableViewSelectionHighlightStyleSourceList)
+
+        tagsGroup = vanilla.Group((0, 0, -0, -0))
+        tagsGroup.tagsLabel = vanilla.TextBox((0, 0, -0, -0), 'tags', sizeStyle='small')
+        tagsGroup.tagsList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False)
+        tagsGroup.tagsList.getNSTableView().setUsesAlternatingRowBackgroundColors_(False)
+        # tagsGroup.tagsList.getNSTableView().setSelectionHighlightStyle_(NSTableViewSelectionHighlightStyleSourceList)
+
+        sourcesGroup = vanilla.Group((0, 0, -0, -0))
+        sourcesGroup.sourcesLabel = vanilla.TextBox((0, 0, -0, -0), 'sources', sizeStyle='small')
+        sourcesGroup.sourcesList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False)
+        sourcesGroup.sourcesList.getNSTableView().setUsesAlternatingRowBackgroundColors_(False)
+        # sourcesGroup.sourcesList.getNSTableView().setSelectionHighlightStyle_(NSTableViewSelectionHighlightStyleSourceList)
+
+        # split views
+
+        filtersGroup = vanilla.SplitView(
+            (0, -0, -0, -0),
+            paneDescriptions=[
+                dict(view=developersGroup, identifier="developers"),
+                dict(view=tagsGroup, identifier="tags"),
+                dict(view=sourcesGroup, identifier="sources"),
+            ],
+            dividerStyle='thin')
+
+        mainPanes = vanilla.SplitView(
+            (0, 0, -0, -0),
+            paneDescriptions=[
+                dict(view=filtersGroup, identifier="filters", size=160, minSize=160, maxSize=240),
+                dict(view=extensionsGroup, identifier="extensions"),
+            ],
+            isVertical=False,
+            dividerStyle='thin')
+
+        self.w.splitView = vanilla.SplitView(
+            (0, 0, -0, -0),
+            paneDescriptions=[
+                dict(view=streamsGroup, identifier="streams", size=140, minSize=120, maxSize=200),
+                dict(view=mainPanes, identifier="main"),
+            ],
+            isVertical=True,
+            dividerStyle='thin')
+
+
+        self._extensionsGroup = extensionsGroup
+        self._developersGroup = developersGroup
+        self._tagsGroup = tagsGroup
+        self._sourcesGroup = sourcesGroup
+
         self.w.open()
 
         self._didCheckedForUpdates = False
@@ -119,29 +195,53 @@ class MechanicController(BaseWindowController):
         progress = self.startProgress("Loading extensions...")
 
         wrappedItems = []
+
+        allDevelopers = []
+        allTags = []
+        allSources = []
+
+        # load extension streams
         for urlStream in getExtensionDefault("com.mechanic.urlstreams"):
+            allSources.append(urlStream)
+
             clss = ExtensionRepository
             if urlStream == extensionStoreDataURL:
                 clss = ExtensionStoreItem
-            for data in getExtensionData(urlStream):
+
+            for data in getExtensionData(urlStream)[:5]:
                 try:
                     item = MCExtensionListItem(clss(data, checkForUpdates=checkForUpdates))
                     wrappedItems.append(item)
+
+                    allDevelopers.append(data['developer'])
+                    allTags += data['tags']
+
                 except Exception as e:
                     logger.error("Creating extension item '%s' from url '%s' failed." % (data.get("extensionName", "unknow"), urlStream))
                     logger.error(e)
 
+        # load single extension items
         for singleExtension in getExtensionDefault("com.mechanic.singleExtensionItems"):
+
+            # print(singleExtension.keys())
+
             try:
-                item = MCExtensionListItem(ExtensionYamlItem(singleExtension, checkForUpdates=checkForUpdates))
+                data = ExtensionYamlItem(singleExtension, checkForUpdates=checkForUpdates)
+                item = MCExtensionListItem(data)
                 wrappedItems.append(item)
             except Exception as e:
                 logger.error("Creating single extension item '%s' failed." % singleExtension.get("extensionName", "unknow"))
                 logger.error(e)
 
+        # update UI list
         progress.update("Setting Extensions...")
         try:
-            self.w.extensionList.set(wrappedItems)
+            self._extensionsGroup.extensionList.set(wrappedItems)
+
+            self._developersGroup.developersList.set(sorted(list(set(allDevelopers))))
+            self._tagsGroup.tagsList.set(sorted(list(set(allTags))))
+            self._sourcesGroup.sourcesList.set(allSources)
+
         except Exception as e:
             logger.error("Cannot set items in mechanic list.")
             logger.error(e)
@@ -156,7 +256,7 @@ class MechanicController(BaseWindowController):
             now = time.time()
             setExtensionDefault("com.mechanic.lastUpdateCheck", now)
             title = time.strftime("Checked at %H:%M", time.localtime(now))
-            self.w.checkForUpdates.setTitle(title)
+            self._extensionsGroup.checkForUpdates.setTitle(title)
             self._didCheckedForUpdates = True
         progress.close()
 
@@ -176,27 +276,32 @@ class MechanicController(BaseWindowController):
             title = "Purchase"
             if multiSelection:
                 title += " (%s)" % len(notInstalledStore)
-            buttons.append((title, self.w.purchaseButton))
+            buttons.append((title, self._extensionsGroup.purchaseButton))
 
         if notInstalledNotStore:
             title = "Install"
             if multiSelection:
                 title += " (%s)" % len(notInstalledNotStore)
-            buttons.append((title, self.w.installButton))
+            buttons.append((title, self._extensionsGroup.installButton))
 
         if needsUpdate:
             title = "Update"
             if multiSelection:
                 title += " (%s)" % len(needsUpdate)
-            buttons.append((title, self.w.updateButton))
+            buttons.append((title, self._extensionsGroup.updateButton))
 
         if installed:
             title = "Uninstall"
             if multiSelection:
                 title += " (%s)" % len(installed)
-            buttons.append((title, self.w.uninstallButton))
+            buttons.append((title, self._extensionsGroup.uninstallButton))
 
-        allButtons = [self.w.purchaseButton, self.w.installButton, self.w.uninstallButton, self.w.updateButton]
+        allButtons = [
+            self._extensionsGroup.purchaseButton,
+            self._extensionsGroup.installButton,
+            self._extensionsGroup.uninstallButton,
+            self._extensionsGroup.updateButton
+        ]
 
         left = -10
         for title, button in buttons:
@@ -232,8 +337,8 @@ class MechanicController(BaseWindowController):
                         item.forceCheckExtensionNeedsUpdate()
                     progress.setTickCount(None)
                     progress.close()
-                    self.w.extensionList.getNSTableView().reloadData()
-                    self.extensionListSelectionCallback(self.w.extensionList)
+                    self._extensionsGroup.extensionList.getNSTableView().reloadData()
+                    self.extensionListSelectionCallback(self._extensionsGroup.extensionList)
                 else:
                     # load all extension and check for updates
                     self.loadExtensions(True)
@@ -294,8 +399,8 @@ class MechanicController(BaseWindowController):
                 foundErrors = True
             progress.update()
         progress.close()
-        self.w.extensionList.getNSTableView().reloadData()
-        self.extensionListSelectionCallback(self.w.extensionList)
+        self._extensionsGroup.extensionList.getNSTableView().reloadData()
+        self.extensionListSelectionCallback(self._extensionsGroup.extensionList)
         if foundErrors:
             self.showMessage(message, "Failed, see output window for details.")
 
@@ -309,7 +414,7 @@ class MechanicController(BaseWindowController):
 
     def toolbarSearch(self, sender):
         search = sender.get()
-        arrayController = self.w.extensionList.getNSTableView().dataSource()
+        arrayController = self._extensionsGroup.extensionList.getNSTableView().dataSource()
         if not search:
             arrayController.setFilterPredicate_(None)
         else:
@@ -324,8 +429,13 @@ class MechanicController(BaseWindowController):
     # helpers
 
     def getSelection(self):
-        arrayController = self.w.extensionList.getNSTableView().dataSource()
+        arrayController = self._extensionsGroup.extensionList.getNSTableView().dataSource()
         selection = arrayController.selectedObjects()
         if selection:
             return [item.extensionObject() for item in selection]
         return []
+
+
+if __name__ == '__main__':
+
+    MechanicController(shouldLoad=True)
