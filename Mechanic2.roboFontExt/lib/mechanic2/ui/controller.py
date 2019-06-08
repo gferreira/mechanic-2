@@ -134,19 +134,19 @@ class MechanicController(BaseWindowController):
 
         developersGroup = vanilla.Group((0, 0, -0, -0))
         developersGroup.developersLabel = vanilla.TextBox((0, 0, -0, -0), 'developers', sizeStyle='small')
-        developersGroup.developersList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False)
+        developersGroup.developersList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False, selectionCallback=self.filtersCallback)
         developersGroup.developersList.getNSTableView().setUsesAlternatingRowBackgroundColors_(False)
         # developersGroup.developersList.getNSTableView().setSelectionHighlightStyle_(NSTableViewSelectionHighlightStyleSourceList)
 
         tagsGroup = vanilla.Group((0, 0, -0, -0))
         tagsGroup.tagsLabel = vanilla.TextBox((0, 0, -0, -0), 'tags', sizeStyle='small')
-        tagsGroup.tagsList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False)
+        tagsGroup.tagsList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False, selectionCallback=self.filtersCallback)
         tagsGroup.tagsList.getNSTableView().setUsesAlternatingRowBackgroundColors_(False)
         # tagsGroup.tagsList.getNSTableView().setSelectionHighlightStyle_(NSTableViewSelectionHighlightStyleSourceList)
 
         sourcesGroup = vanilla.Group((0, 0, -0, -0))
         sourcesGroup.sourcesLabel = vanilla.TextBox((0, 0, -0, -0), 'sources', sizeStyle='small')
-        sourcesGroup.sourcesList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False)
+        sourcesGroup.sourcesList  = vanilla.List((0, 20, -0, -0), [], drawHorizontalLines=False, drawFocusRing=False, selectionCallback=self.filtersCallback)
         sourcesGroup.sourcesList.getNSTableView().setUsesAlternatingRowBackgroundColors_(False)
         # sourcesGroup.sourcesList.getNSTableView().setSelectionHighlightStyle_(NSTableViewSelectionHighlightStyleSourceList)
 
@@ -179,7 +179,6 @@ class MechanicController(BaseWindowController):
             isVertical=True,
             dividerStyle='thin')
 
-
         self._extensionsGroup = extensionsGroup
         self._developersGroup = developersGroup
         self._tagsGroup = tagsGroup
@@ -208,7 +207,7 @@ class MechanicController(BaseWindowController):
             if urlStream == extensionStoreDataURL:
                 clss = ExtensionStoreItem
 
-            for data in getExtensionData(urlStream)[:5]:
+            for data in getExtensionData(urlStream):
                 try:
                     item = MCExtensionListItem(clss(data, checkForUpdates=checkForUpdates))
                     wrappedItems.append(item)
@@ -222,9 +221,6 @@ class MechanicController(BaseWindowController):
 
         # load single extension items
         for singleExtension in getExtensionDefault("com.mechanic.singleExtensionItems"):
-
-            # print(singleExtension.keys())
-
             try:
                 data = ExtensionYamlItem(singleExtension, checkForUpdates=checkForUpdates)
                 item = MCExtensionListItem(data)
@@ -237,7 +233,6 @@ class MechanicController(BaseWindowController):
         progress.update("Setting Extensions...")
         try:
             self._extensionsGroup.extensionList.set(wrappedItems)
-
             self._developersGroup.developersList.set(sorted(list(set(allDevelopers))))
             self._tagsGroup.tagsList.set(sorted(list(set(allTags))))
             self._sourcesGroup.sourcesList.set(allSources)
@@ -424,6 +419,43 @@ class MechanicController(BaseWindowController):
                 query.append('extensionSearchString CONTAINS "%s"' % search)
             query = " AND ".join(query)
             predicate = NSPredicate.predicateWithFormat_(query)
+            arrayController.setFilterPredicate_(predicate)
+
+    # filters
+
+    def filtersCallback(self, sender):
+        developers = self._developersGroup.developersList.get()
+        tags = self._tagsGroup.tagsList.get()
+        sources = self._sourcesGroup.sourcesList.get()
+
+        searchDevelopers = [developers[i].lower() for i in self._developersGroup.developersList.getSelection()]
+        searchTags = [tags[i] for i in self._tagsGroup.tagsList.getSelection()]
+        searchSources = [sources[i] for i in self._sourcesGroup.sourcesList.getSelection()]
+
+        arrayController = self._extensionsGroup.extensionList.getNSTableView().dataSource()
+        if not (searchDevelopers or searchTags or searchSources):
+            arrayController.setFilterPredicate_(None)
+
+        else:
+            searchDevelopers = [developers[i].lower() for i in self._developersGroup.developersList.getSelection()]
+            searchTags = [tags[i] for i in self._tagsGroup.tagsList.getSelection()]
+            # searchSources = [sources[i] for i in self._sourcesGroup.sourcesList.getSelection()]
+
+            queryDevelopers = [f'extensionSearchString CONTAINS "{s}"' for s in searchDevelopers]
+            queryTags = [f'extensionSearchString CONTAINS "{s}"' for s in searchTags]
+            # querySources = [f'extensionSearchString CONTAINS "{s}"' for s in searchSources]
+
+            queries = []
+            for q in [queryDevelopers, queryTags]: # querySources
+                if not q:
+                    continue
+                queries.append(f'({" OR ".join(q)})')
+
+            query = " AND ".join(queries) if len(queries) > 1 else queries[0]
+            print(query)
+
+            predicate = NSPredicate.predicateWithFormat_(query)
+            arrayController = self._extensionsGroup.extensionList.getNSTableView().dataSource()
             arrayController.setFilterPredicate_(predicate)
 
     # helpers
